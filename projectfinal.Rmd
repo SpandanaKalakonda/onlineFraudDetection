@@ -1,0 +1,332 @@
+---
+title: "finalProject"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r}
+library(caret)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+setwd("C:\\Ml\\frauddetection")
+data <- read.csv("fraud_detection.csv")
+dim(data)
+str(data)
+summary(data)
+```
+```{r}
+head(data)
+```
+```{r}
+data <- unique(data)
+dim(data)
+data$new_isFraud <- ifelse(data$isFraud == 0, "no fraud", "fraud")
+```
+```{r}
+columns_NA <- which(colSums(is.na(data))>0)
+columns_NA
+```
+```{r}
+ggplot(data, aes(x = new_isFraud)) +geom_bar() +ggtitle("Distribution of fraud transactions")
+```
+```{r}
+freq_fraud <- table(data$isFraud)
+freq_fraud
+```
+```{r}
+hist(data$isFlaggedFraud, xlab = "Is Flagged Fraud", ylab = "No of Flagged Fraud transactions",main="Histogram of Flagged Fraud Transactions")
+```
+```{r}
+freq_flaggedfraud <- table(data$isFlaggedFraud)
+freq_flaggedfraud
+```
+```{r}
+ggplot(data, aes(x  = step)) +geom_density(fill = "blue", alpha = 0.2) +labs(x = "Step", y = "density") + ggtitle("Distribution of Step")
+```
+```{r}
+ggplot(data, aes(x = step, fill = factor(new_isFraud))) + geom_histogram(bins = 100)+
+  labs(x = 'step', y = 'No. of transactions') +ggtitle('Distribution of step of transaction') 
+```
+
+
+```{r}
+summary(data$amount)
+```
+```{r}
+ggplot(data, aes(x = new_isFraud, y = amount)) +geom_boxplot() + labs(x = "isFraud", y = "Amount") +ggtitle("Amount Vs Fraud Transactions")
+```
+```{r}
+ggplot(data, aes(x = new_isFraud, y = oldbalanceOrg)) +geom_boxplot() +labs(x = "isFraud", y = "OldbalanceOrg") +ggtitle("OldbalanceOrg Vs Fraud Transactions")
+```
+
+```{r}
+ggplot(data, aes(x = new_isFraud, y = newbalanceOrig)) +geom_boxplot() +labs(x = "isFraud", y = "NewbalanceOrig") +ggtitle("NewbalanceOrig Vs Fraud Transactions")
+```
+
+```{r}
+ggplot(data, aes(x = new_isFraud, y = oldbalanceDest)) +geom_boxplot() +labs(x = "isFraud", y = "OldbalanceDest") +ggtitle("OldbalanceDest Vs Fraud Transactions")
+```
+```{r}
+ggplot(data, aes(x = new_isFraud, y = newbalanceDest)) +geom_boxplot() +labs(x = "isFraud", y = "newbalanceDest") +ggtitle("NewbalanceDest Vs Fraud Transactions")
+```
+
+```{r}
+ggplot(data, aes(x = type,fill = factor(new_isFraud))) +geom_bar() +ggtitle("Distribution of Type of transactions")
+```
+```{r}
+freq_type <- table(data$type, data$new_isFraud)
+freq_type
+```
+```{r}
+freq_amount <- table(data$amount, data$new_isFraud)
+```
+
+```{r}
+q10_a <- quantile(data$amount, 0.1)
+q10_a
+q90_a <- quantile(data$amount, 0.9)
+q90_a
+```
+```{r}
+data$amount <- ifelse(data$amount < q10_a, q10_a, data$amount)
+data$amount <- ifelse(data$amount > q90_a, q90_a, data$amount)
+summary(data$amount)
+```
+```{r}
+ggplot(data, aes(x = new_isFraud, y = amount)) +geom_boxplot() + labs(x = "isFraud", y = "Amount") +ggtitle("Amount Vs Fraud Transactions")
+```
+
+```{r}
+q10_oo <- quantile(data$oldbalanceOrg, 0.1)
+q10_oo
+q90_oo <- quantile(data$oldbalanceOrg, 0.9)
+q90_oo
+data$oldbalanceOrg <- ifelse(data$oldbalanceOrg < q10_oo, q10_oo, data$oldbalanceOrg)
+data$oldbalanceOrg<- ifelse(data$oldbalanceOrg > q90_oo, q90_oo, data$oldbalanceOrg)
+summary(data$oldbalanceOrg)
+```
+```{r}
+q10_no <- quantile(data$newbalanceOrig, 0.1)
+q10_no
+q90_no <- quantile(data$newbalanceOrig, 0.9)
+q90_no
+data$newbalanceOrig <- ifelse(data$newbalanceOrig < q10_no, q10_no, data$newbalanceOrig)
+data$newbalanceOrig<- ifelse(data$newbalanceOrig > q90_no, q90_no, data$newbalanceOrig)
+summary(data$newbalanceOrig)
+```
+```{r}
+q10_od <- quantile(data$oldbalanceDest, 0.1)
+q10_od
+q90_od <- quantile(data$oldbalanceDest, 0.9)
+q90_od
+data$oldbalanceDest <- ifelse(data$oldbalanceDest < q10_od, q10_od, data$oldbalanceDest)
+data$oldbalanceDest<- ifelse(data$oldbalanceDest > q90_od, q90_od, data$oldbalanceDest)
+summary(data$oldbalanceDest)
+```
+
+```{r}
+data$type <- factor(data$type, levels = c( "CASH_IN", "CASH_OUT", "DEBIT", "PAYMENT","TRANSFER"))
+data$type <- as.integer(data$type)
+```
+
+```{r}
+variables <- names(data)
+data_numeric <- data[, sapply(data, is.numeric),]
+names(data_numeric)
+```
+```{r}
+cor_matrix <-cor(data_numeric)
+cor_fraud <- cor_matrix[, "isFraud"]
+cor_sorted <- as.matrix(sort(cor_fraud, decreasing = TRUE))
+cor_sorted
+```
+```{r}
+t.test(data$isFraud, data$isFlaggedFraud)
+t.test(data$isFraud, data$amount)
+t.test(data$isFraud, data$type)
+t.test(data$isFraud, data$step)
+t.test(data$isFraud, data$oldbalanceOrg)
+t.test(data$isFraud, data$newbalanceOrig)
+t.test(data$isFraud, data$oldbalanceDest)
+t.test(data$isFraud, data$newbalanceDest)
+```
+```{r}
+data1 <- subset(data, select = -c(isFlaggedFraud, nameOrig, nameDest, newbalanceOrig, oldbalanceDest))
+```
+```{r}
+dim(data1)
+```
+```{r}
+set.seed(1)
+downsampled_data <- downSample(x = data1[, -ncol(data1)], y = factor(data1$new_isFraud))
+table(downsampled_data$isFraud)
+```
+```{r}
+str(downsampled_data)
+```
+
+```{r}
+library(caret)
+downsampled_data= downsampled_data[, -c(6)]
+intrain= createDataPartition(downsampled_data$Class, list=FALSE, p=0.8)
+data_train= downsampled_data[intrain,]
+data_test= downsampled_data[-intrain,]
+dim(data_train)
+```
+```{r}
+dim(data_test)
+levels(data_test$Class)
+```
+```{r}
+lr_model <- glm(Class ~ ., data = data_train, family = "binomial")
+lr_pred <- predict(lr_model, data_test, type = "response")
+lr_pred_label<- predict(lr_model, data_test)
+summary(lr_model)
+```
+```{r}
+library(pROC)
+
+roc_obj <- roc(data_test$Class, lr_pred)
+auc <- auc(roc_obj)
+
+plot(roc_obj, main = paste0("ROC Curve (AUC = ", round(auc, 3), ")"))
+
+```
+```{r}
+library(caret)
+levels <- levels(data_test$Class)
+lr_pred_factor <- factor(ifelse(lr_pred > 0.5, "no fraud", "fraud"), levels = levels(data_test$Class))
+
+confusionMatrix(lr_pred_factor, data_test$Class)
+```
+```{r}
+library(randomForest)
+set.seed(1)
+str(data_test)
+str(data_train)
+levels(data_test$Class) <- make.names(levels(data_test$Class))
+levels(data_train$Class) <- make.names(levels(data_train$Class))
+mtry_values <- seq(1, ncol(data_train) - 1, by = 1)
+
+rf_model <- randomForest(Class ~ ., data = data_train, ntree = 100, max_depth = 10,  tuneGrid = data.frame(mtry = mtry_values))
+cv <- trainControl(method = "cv", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+rf_cv <- train(Class ~ ., data = data_train, method = "rf", trControl = cv, ntree = 100, max_depth = 10,  tuneGrid = data.frame(mtry = mtry_values))
+
+```
+```{r}
+rf_pred <- predict(rf_cv, newdata = data_test)
+confusionMatrix(rf_pred, data_test$Class)
+
+```
+```{r}
+roc_obj <- roc(as.numeric(rf_pred), as.numeric(data_test$Class) - 1)
+auc <- auc(roc_obj)
+plot(roc_obj, main = paste0("ROC Curve (AUC = ", round(auc, 3), ")"))
+```
+```{r}
+varImp(rf_model)
+```
+```{r}
+library(gbm)
+
+cv <- trainControl(method = "cv", number = 10, verboseIter = TRUE, classProbs = TRUE)
+
+grid <- expand.grid(
+  n.trees = c(50, 100, 150),
+  interaction.depth = c(1, 3, 5),
+  shrinkage = c(0.1, 0.01, 0.001),
+  n.minobsinnode = c(10, 20, 30)
+)
+
+gbm_model <- train(Class ~ ., data = data_train,method = "gbm",trControl = cv,tuneGrid = grid,verbose = FALSE)
+
+print(gbm_model$bestTune)
+
+gbm_pred <- predict(gbm_model, newdata = data_test, type = "prob")
+
+```
+```{r}
+
+
+# Calculate AUC and plot ROC curve
+roc_obj <- roc(data_test$Class, gbm_pred$no.fraud)
+auc <- auc(roc_obj)
+plot(roc_obj, main = paste0("ROC Curve (AUC = ", round(auc, 3), ")"))
+
+
+```
+```{r}
+gbm_pred_factor <- factor(ifelse(gbm_pred > 0.5, "no.fraud", "fraud"), levels = levels(data_test$Class))
+gbm_pred_factor <- gbm_pred_factor[(length(gbm_pred_factor)/2 + 1):length(gbm_pred_factor)]
+confusionMatrix(gbm_pred_factor, data_test$Class)
+```
+```{r}
+library(tensorflow)
+library(keras)
+library(tfruns)
+library(caret)
+library(dplyr)
+```
+```{r}
+dim(data_val)
+```
+```{r}
+train_y <- as.numeric(factor(data_train$Class))
+test_y <- as.numeric(factor(data_test$Class))
+train_x <- as.matrix(select(data_train, -c(Class)))
+test_x <- as.matrix(select(data_test, -c(Class)))
+
+```
+
+```{r}
+
+set.seed(1)
+FLAGS<-list(
+  learning_rate= 0.00001,
+  units1 = 128,
+  units2 = 64,
+  batch_size = 128,
+  epochs = 30
+)
+
+model <- keras_model_sequential() %>%
+  layer_dense(units = FLAGS$units1, activation = "relu",
+              input_shape = dim(train_x)[2]) %>%
+  layer_dropout(rate=0.2)%>%
+  layer_dense(units = FLAGS$units2, activation = "relu") %>%
+  layer_dropout(rate=0.2)%>%
+  layer_dense(units = 1, activation = "softmax")
+
+opt= optimizer_adam(learning_rate= FLAGS$learning_rate)
+model %>% compile(
+  loss = "mse",
+  optimizer = opt ,
+  metrics = "accuracy")
+
+```
+```{r}
+history <- model %>% fit(train_x,
+                         train_y,
+                         batch_size=FLAGS$batch_size,
+                         epochs = FLAGS$epochs,
+                         validation_spilt=0.1)
+```
+
+```{r}
+
+nn_pred <- predict(model, test_x)
+
+# Convert predicted probabilities to class predictions
+predicted_classes <- ifelse(nn_pred[,1] > 0.5, 1, 0)
+
+# Create confusion matrix
+confusionMatrix(data = factor(predicted_classes, levels = c(1,0)),
+                reference = factor(test_y, levels = c(1,0)))
+```
+
+
+
